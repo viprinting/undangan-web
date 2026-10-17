@@ -248,9 +248,9 @@
            ==================================== */
         .footer-credit {
             position: absolute;
-            bottom: 25px;
+            bottom: 10px; /* Nilai diturunkan dari 25px menjadi 10px */
             width: 100%;
-            padding: 0 40px; /* Ruang di kiri kanan agar garis tidak menabrak batas layar */
+            padding: 0 40px; 
             text-align: center;
             z-index: 10;
         }
@@ -269,7 +269,7 @@
         .footer-link-container:hover {
             opacity: 1;
             color: var(--gold-light);
-            transform: translateY(-3px); /* Efek melayang saat di-hover */
+            transform: translateY(-3px);
         }
 
         /* Wadah logo dan garis */
@@ -296,17 +296,14 @@
         }
 
         .footer-logo {
-            height: 35px; /* Logo diperbesar agar lebih menonjol */
+            height: 35px;
             width: auto;
-            background-color: rgba(255, 255, 255, 0.95); /* Latar putih agar desain logo terlihat utuh */
-            padding: 5px 10px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); /* Efek timbul (drop-shadow) */
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); /* Efek bayangan yang mengikuti lekuk logo transparan */
             transition: transform 0.3s ease;
         }
 
         .footer-link-container:hover .footer-logo {
-            transform: scale(1.05); /* Membesar sedikit ketika di-hover */
+            transform: scale(1.05); 
         }
 
         /* Pengaturan teks di bawah logo */
