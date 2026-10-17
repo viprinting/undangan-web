@@ -387,10 +387,14 @@
     <div class="modal-overlay" id="reminderModal">
         <div class="modal-content">
             <h3>Pengingat Otomatis</h3>
-            <p>Masukkan nomor WhatsApp Anda. Kami akan mengirimkan pengingat di hari H acara.</p>
+            <p>Masukkan nomor WhatsApp dan atur waktu kapan Anda ingin diingatkan tentang acara ini.</p>
             
             <form id="formReminder">
                 <input type="tel" id="waNumber" placeholder="Contoh: 081234567890" required pattern="[0-9]+" minlength="10">
+                
+                <!-- Input baru untuk setting waktu -->
+                <input type="datetime-local" id="waktuPengingat" required title="Pilih tanggal dan waktu pengingat">
+                
                 <button type="submit" class="btn btn-submit" id="btnSubmitForm">Simpan Nomor</button>
                 <button type="button" class="btn btn-cancel" onclick="closeModal()">Batal</button>
             </form>
@@ -512,9 +516,20 @@
                     }
                 }
 
-                // Simpan id (UUID) dan jadwal untuk keperluan tabel pengingat_wa
+              // Simpan id (UUID) dan jadwal untuk keperluan tabel pengingat_wa
                 dataWeddingId = data.id;
                 jadwalFonnte = data.jadwal_fonnte;
+
+                // --- KODE BARU: Set default waktu pengingat otomatis ---
+                // Memastikan jadwalFonnte memiliki data sebelum di-slice
+                if (data.jadwal_fonnte && data.jadwal_fonnte.length >= 10) {
+                    // Ambil bagian tanggal saja 'YYYY-MM-DD' dari jadwal_fonnte
+                    let tanggalAcara = data.jadwal_fonnte.substring(0, 10); 
+                    
+                    // Gabungkan dengan jam 08:00 dan set nilainya ke input
+                    document.getElementById('waktuPengingat').value = `${tanggalAcara}T08:00`;
+                }
+                // -------------------------------------------------------
 
                 // Matikan loading, tampilkan undangan
                 loadingScreen.style.opacity = "0";
@@ -547,17 +562,21 @@
             document.getElementById('formReminder').reset();
         }
 
-        // Fungsi ketika tombol "Simpan Nomor" diklik
+     // Fungsi ketika tombol "Simpan Nomor" diklik
         document.getElementById('formReminder').addEventListener('submit', async function(e) {
             e.preventDefault(); // Mencegah halaman ter-refresh
 
             let inputNumber = document.getElementById('waNumber').value;
+            let inputWaktu = document.getElementById('waktuPengingat').value; // Mengambil data waktu dari input
             let btnSubmit = document.getElementById('btnSubmitForm');
             
             // Format nomor: Ubah '08...' menjadi '628...'
             if(inputNumber.startsWith('0')) {
                 inputNumber = '62' + inputNumber.substring(1);
             }
+
+            // Format tanggal dari "YYYY-MM-DDTHH:mm" menjadi "YYYY-MM-DD HH:mm:00" agar kompatibel dengan sistem pengirim WA (seperti Fonnte)
+            let jadwalKirimDipilih = inputWaktu.replace('T', ' ') + ':00';
 
             // Ubah teks tombol menjadi loading
             btnSubmit.innerText = "Menyimpan...";
@@ -571,18 +590,18 @@
                         { 
                             nomor_wa: inputNumber, 
                             wedding_id: dataWeddingId, 
-                            jadwal_kirim: jadwalFonnte 
+                            jadwal_kirim: jadwalKirimDipilih // Menyimpan waktu pilihan user, bukan dari database asal
                         }
                     ]);
 
                 if (error) throw error;
 
-                alert("Nomor berhasil disimpan! Kami akan mengingatkan Anda nanti.");
+                alert("Nomor dan jadwal pengingat berhasil disimpan!");
                 closeModal();
 
             } catch (error) {
                 console.error("Error inserting data:", error);
-                alert("Gagal menyimpan nomor. Silakan coba lagi.");
+                alert("Gagal menyimpan data. Silakan coba lagi.");
             } finally {
                 // Kembalikan kondisi tombol
                 btnSubmit.innerText = "Simpan Nomor";
