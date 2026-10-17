@@ -35,6 +35,7 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
+            min-height: 100dvh; /* Menggunakan Dynamic Viewport Height untuk HP */
             overflow: hidden;
         }
 
@@ -42,12 +43,14 @@
         .invitation-card {
             width: 100%;
             max-width: 480px;
-            height: 100vh;
+            min-height: 100vh;
+            min-height: 100dvh;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            padding: 40px 20px;
+            /* Padding bawah dibuat 100px agar konten utama terangkat ke tengah visual */
+            padding: 40px 20px 100px 20px; 
             text-align: center;
             position: relative;
             background: radial-gradient(circle at center, #111D4A 0%, #0A1128 100%);
@@ -248,7 +251,7 @@
            ==================================== */
         .footer-credit {
             position: absolute;
-            bottom: 10px; /* Nilai diturunkan dari 25px menjadi 10px */
+            bottom: 20px; /* Disesuaikan sedikit untuk layar sentuh bawah */
             width: 100%;
             padding: 0 40px; 
             text-align: center;
@@ -298,7 +301,7 @@
         .footer-logo {
             height: 35px;
             width: auto;
-            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); /* Efek bayangan yang mengikuti lekuk logo transparan */
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); 
             transition: transform 0.3s ease;
         }
 
