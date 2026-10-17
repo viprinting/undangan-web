@@ -10,6 +10,11 @@
     
     <!-- Library Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/id.js"></script> <!-- Translate ke Bahasa Indonesia -->
+    <!-- Library Flatpickr untuk Custom Format Tanggal -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/dark.css"> <!-- Sesuai tema gelap undangan -->
 
     <style>
         /* CSS RESET & VARIABLES */
@@ -392,9 +397,11 @@
             <form id="formReminder">
                 <input type="tel" id="waNumber" placeholder="Contoh: 081234567890" required pattern="[0-9]+" minlength="10">
                 
-                <!-- Input baru untuk setting waktu -->
-                <input type="datetime-local" id="waktuPengingat" required title="Pilih tanggal dan waktu pengingat">
+                <!-- Input waktu diubah menjadi type="text" -->
+                <input type="text" id="waktuPengingat" required placeholder="Pilih tanggal dan waktu pengingat" style="margin-bottom: 5px;">
                 
+                <!-- Teks pemberitahuan otomatis -->
+                <p id="teksPemberitahuan" style="font-size: 12px; color: var(--gold-main); margin-bottom: 20px; text-align: left;"></p>
                 <button type="submit" class="btn btn-submit" id="btnSubmitForm">Simpan Nomor</button>
                 <button type="button" class="btn btn-cancel" onclick="closeModal()">Batal</button>
             </form>
@@ -411,9 +418,13 @@
         // Inisialisasi Supabase
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // Variabel global untuk menyimpan data spesifik undangan ini
         let dataWeddingId = "";
         let jadwalFonnte = "";
+        
+        // --- Variabel Baru ---
+        let jamResepsiAcara = "08:00"; 
+        let tanggalResepsiAcara = "";
+        
 
         // ==========================================
         // 2. MENGAMBIL DATA DARI DATABASE BERDASARKAN URL
@@ -443,7 +454,6 @@
                         "tanggalResepsi", 
                         "jamResepsi", 
                         maps_link, 
-                        jadwal_fonnte,
                         "usernamePercetakan",
                         percetakan (
                             username,
@@ -464,6 +474,12 @@
                 document.getElementById('nama-mempelai').innerText = `${data.wPanggilan} & ${data.pPanggilan}`;
                 document.getElementById('tanggal-resepsi').innerText = data.tanggalResepsi;
                 document.getElementById('waktu-resepsi').innerText = data.jamResepsi;
+                // Ekstrak waktu jam (misal "11.00" atau "11:00") dari string database
+                const jamMatch = data.jamResepsi.match(/(\d{1,2})[.:](\d{2})/);
+                if (jamMatch) {
+                    // Gabungkan dan format ke bentuk HH:mm (contoh: "11:00") agar bisa dihitung
+                    jamResepsiAcara = `${jamMatch[1].padStart(2, '0')}:${jamMatch[2]}`;
+                }
                 
                 if (data.maps_link) {
                     document.getElementById('btn-maps').href = data.maps_link;
@@ -516,19 +532,10 @@
                     }
                 }
 
-              // Simpan id (UUID) dan jadwal untuk keperluan tabel pengingat_wa
+           // Simpan id (UUID) dan tanggal resepsi
                 dataWeddingId = data.id;
-                jadwalFonnte = data.jadwal_fonnte;
-
-                // --- KODE BARU: Set default waktu pengingat otomatis ---
-                // Memastikan jadwalFonnte memiliki data sebelum di-slice
-                if (data.jadwal_fonnte && data.jadwal_fonnte.length >= 10) {
-                    // Ambil bagian tanggal saja 'YYYY-MM-DD' dari jadwal_fonnte
-                    let tanggalAcara = data.jadwal_fonnte.substring(0, 10); 
-                    
-                    // Gabungkan dengan jam 08:00 dan set nilainya ke input
-                    document.getElementById('waktuPengingat').value = `${tanggalAcara}T08:00`;
-                }
+                // Kita gunakan variabel global yang sama untuk menampung string tanggal resepsi
+                jadwalFonnte = data.tanggalResepsi;
                 // -------------------------------------------------------
 
                 // Matikan loading, tampilkan undangan
@@ -547,19 +554,117 @@
         // Jalankan fungsi saat halaman web pertama kali dibuka
         window.onload = muatDataUndangan;
 
+        // Fungsi untuk mengonversi nama bulan Indonesia ke angka
+        function getBulanAngka(namaBulan) {
+            const bulan = {
+                "januari": "01", "februari": "02", "maret": "03", "april": "04",
+                "mei": "05", "juni": "06", "juli": "07", "agustus": "08",
+                "september": "09", "oktober": "10", "november": "11", "desember": "12"
+            };
+            return bulan[namaBulan.toLowerCase()] || "01"; // Default ke 01 jika tidak dikenali
+        }
+
+
+        // Inisialisasi Flatpickr dengan Format Kustom
+        let fpInstance = flatpickr("#waktuPengingat", {
+            enableTime: true,
+            time_24hr: true,
+            locale: "id", // Menggunakan Bahasa Indonesia
+            altInput: true, // Membuat input palsu untuk dilihat user
+            
+            // Catatan: Umumnya format Indonesia adalah DD/MM/YYYY (d/m/Y). 
+            // Jika Anda benar-benar butuh format Hari/Tahun/NamaBulan (DD/YY/MMMM), ganti menjadi: "d/y/F H:i"
+            altFormat: "d/m/Y H:i", 
+            
+            dateFormat: "Y-m-d\\TH:i", // Jangan diubah: Format sistem di balik layar (YYYY-MM-DDTHH:mm)
+            onChange: function() {
+                updatePemberitahuan(); // Langsung perbarui teks hitung mundur saat tanggal diganti
+            }
+        });
 
         // ==========================================
         // 3. LOGIKA POP-UP MODAL & PENYIMPANAN NOMOR
         // ==========================================
         const modal = document.getElementById('reminderModal');
 
-        function openModal() {
+       function openModal() {
             modal.classList.add('active');
-        }
+            
+            // 1. Tanggal fallback (hari ini)
+            let fallbackDate = new Date();
+            let yyyy = fallbackDate.getFullYear();
+            let mm = String(fallbackDate.getMonth() + 1).padStart(2, '0');
+            let dd = String(fallbackDate.getDate()).padStart(2, '0');
+            let tanggalValid = `${yyyy}-${mm}-${dd}`;
 
+            // 2. Coba ekstrak tanggal dari kolom tanggalResepsi (contoh: "Minggu, 08 November 2026")
+            if (jadwalFonnte) {
+                try {
+                    // Cari pola angka (1 atau 2 digit), spasi, huruf (nama bulan), spasi, angka (4 digit tahun)
+                    // Pola Regex ini akan mengabaikan hari ("Minggu,")
+                    let polaTanggalIndo = jadwalFonnte.match(/(\d{1,2})\s+([a-zA-Z]+)\s+(\d{4})/);
+
+                    if (polaTanggalIndo) {
+                        let tanggalExtracted = polaTanggalIndo[1].padStart(2, '0'); // Pad ke 2 digit (misal '7' jadi '07')
+                        let bulanExtracted = getBulanAngka(polaTanggalIndo[2]);     // Terjemahkan nama bulan
+                        let tahunExtracted = polaTanggalIndo[3];                    // Ambil tahun
+
+                        tanggalValid = `${tahunExtracted}-${bulanExtracted}-${tanggalExtracted}`;
+                    }
+                } catch (e) {
+                    console.error("Gagal parse tanggalResepsi:", e);
+                }
+            }
+
+           // 3. Masukkan ke input melalui Flatpickr
+            fpInstance.setDate(`${tanggalValid}T08:00`);
+            
+            // Simpan tanggal valid dan panggil kalkulasi teks otomatis
+            tanggalResepsiAcara = tanggalValid;
+            updatePemberitahuan();
+        }
+        
         function closeModal() {
             modal.classList.remove('active');
             document.getElementById('formReminder').reset();
+        }
+
+        // Event listener jika user merubah input waktu
+        document.getElementById('waktuPengingat').addEventListener('input', updatePemberitahuan);
+
+        function updatePemberitahuan() {
+            const teksPemberitahuan = document.getElementById('teksPemberitahuan');
+            const waktuPengingat = document.getElementById('waktuPengingat').value;
+
+            if (!waktuPengingat || !tanggalResepsiAcara) return;
+
+            // Gabungkan tanggal acara dan jam acara menjadi satu format Date utuh
+            const waktuAcaraFull = new Date(`${tanggalResepsiAcara}T${jamResepsiAcara}`);
+            const waktuPengingatFull = new Date(waktuPengingat);
+
+            // Hitung selisih dalam milidetik
+            const selisihMs = waktuAcaraFull - waktuPengingatFull;
+
+            // Jika user memilih waktu di masa lalu atau setelah acara
+            if (selisihMs <= 0) {
+                teksPemberitahuan.innerText = "* Peringatan: Waktu pengingat harus sebelum acara dimulai.";
+                teksPemberitahuan.style.color = "#ff4d4d"; // Warna merah
+            } else {
+                teksPemberitahuan.style.color = "var(--gold-main)";
+                
+                // Konversi selisih ke jam dan hari
+                const selisihJam = Math.floor(selisihMs / (1000 * 60 * 60));
+                const selisihHari = Math.floor(selisihJam / 24);
+
+                if (selisihHari > 0) {
+                    teksPemberitahuan.innerText = `* Pengingat akan dikirim ${selisihHari} hari sebelum acara.`;
+                } else if (selisihJam > 0) {
+                    teksPemberitahuan.innerText = `* Pengingat akan dikirim ${selisihJam} jam sebelum acara.`;
+                } else {
+                    const selisihMenit = Math.floor(selisihMs / (1000 * 60));
+                    teksPemberitahuan.innerText = `* Pengingat akan dikirim ${selisihMenit} menit sebelum acara.`;
+                }
+            }
         }
 
      // Fungsi ketika tombol "Simpan Nomor" diklik
@@ -583,18 +688,42 @@
             btnSubmit.disabled = true;
 
             try {
-                // Simpan ke Supabase (tabel pengingat_wa)
-                const { error } = await supabaseClient
+                // 1. Cek apakah nomor WA untuk undangan ini sudah ada di database
+                const { data: existingData, error: checkError } = await supabaseClient
                     .from('pengingat_wa')
-                    .insert([
-                        { 
-                            nomor_wa: inputNumber, 
-                            wedding_id: dataWeddingId, 
-                            jadwal_kirim: jadwalKirimDipilih // Menyimpan waktu pilihan user, bukan dari database asal
-                        }
-                    ]);
+                    .select('id')
+                    .eq('nomor_wa', inputNumber)
+                    .eq('wedding_id', dataWeddingId)
+                    .maybeSingle(); // maybeSingle mengembalikan data jika ada, atau null jika tidak ada (tanpa error)
 
-                if (error) throw error;
+                if (checkError) throw checkError;
+
+                let dbError;
+
+                if (existingData) {
+                    // 2a. Jika data SUDAH ADA, lakukan UPDATE pada jadwal kirimnya
+                    const { error: updateError } = await supabaseClient
+                        .from('pengingat_wa')
+                        .update({ jadwal_kirim: jadwalKirimDipilih })
+                        .eq('id', existingData.id);
+                        
+                    dbError = updateError;
+                } else {
+                    // 2b. Jika data BELUM ADA, lakukan INSERT data baru
+                    const { error: insertError } = await supabaseClient
+                        .from('pengingat_wa')
+                        .insert([
+                            { 
+                                nomor_wa: inputNumber, 
+                                wedding_id: dataWeddingId, 
+                                jadwal_kirim: jadwalKirimDipilih 
+                            }
+                        ]);
+                        
+                    dbError = insertError;
+                }
+
+                if (dbError) throw dbError;
 
                 alert("Nomor dan jadwal pengingat berhasil disimpan!");
                 closeModal();
