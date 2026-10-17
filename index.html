@@ -401,6 +401,20 @@
             fill: currentColor;
             margin-top: 1px;
         }
+
+/* Wadah untuk memisahkan Tanggal dan Waktu (Susunan Vertikal) */
+.datetime-container {
+    display: flex;
+    flex-direction: column; /* Mengatur arah elemen menjadi atas-bawah */
+    gap: 15px; /* Mengatur jarak antara kolom tanggal dan kolom waktu */
+    margin-bottom: 15px;
+}
+
+.datetime-container input {
+    margin-bottom: 0 !important; 
+    width: 100% !important; /* Membuat kolom kembali penuh dari kiri ke kanan */
+}
+
     </style>
 </head>
 <body>
@@ -457,7 +471,10 @@
             
             <form id="formReminder">
                 <input type="tel" id="waNumber" placeholder="Contoh: 081234567890" required pattern="[0-9]+" minlength="10">
-                <input type="text" id="waktuPengingat" required placeholder="Pilih tanggal dan waktu pengingat" style="margin-bottom: 5px;">
+                <div class="datetime-container">
+    <input type="text" id="tanggalPengingat" required placeholder="Pilih Tanggal">
+    <input type="text" id="jamPengingat" required placeholder="Pilih Waktu">
+</div>
                 <p id="teksPemberitahuan" style="font-size: 12px; color: var(--gold-main); margin-bottom: 20px; text-align: left;"></p>
                 <button type="submit" class="btn btn-submit" id="btnSubmitForm">Simpan Nomor</button>
                 <button type="button" class="btn btn-cancel" onclick="closeModal()">Batal</button>
@@ -615,13 +632,27 @@
             return bulan[namaBulan.toLowerCase()] || "01";
         }
 
-        // Flatpickr Setup
-    let fpInstance = flatpickr("#waktuPengingat", {
-    enableTime: true,
-    time_24hr: true,
+   // Setup Flatpickr Khusus Tanggal
+let fpTanggal = flatpickr("#tanggalPengingat", {
     locale: "id",
     altInput: true,
-    disableMobile: true, // Tambahkan baris ini agar format custom dan UI Flatpickr tetap muncul di HP
+    disableMobile: true, // Mempertahankan UI gelap di HP
+    altFormat: "l, j F Y", // Contoh: Rabu, 14 Oktober 2026
+    dateFormat: "Y-m-d",
+    onChange: function() {
+        updatePemberitahuan();
+    }
+});
+
+// Setup Flatpickr Khusus Jam
+let fpJam = flatpickr("#jamPengingat", {
+    enableTime: true,
+    noCalendar: true, // Hanya menampilkan pilihan jam
+    time_24hr: true,
+    disableMobile: true,
+    altInput: true,
+    altFormat: "CUSTOM_TIME", // Mengarahkan ke format kustom di bawah
+    dateFormat: "H:i", // Format ini yang akan disimpan ke database (misal: "08:00")
     plugins: [
         new confirmDatePlugin({
             confirmIcon: "",
@@ -630,26 +661,19 @@
             theme: "dark"
         })
     ],
-    altFormat: "CUSTOM",
-    dateFormat: "Y-m-d\\TH:i",
     formatDate: function(date, format, locale) {
-        if (format === "CUSTOM") {
-            const daftarHari = ["Ahad", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
-                    const daftarBulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-                    const hari = daftarHari[date.getDay()];
-                    const tgl = date.getDate();
-                    const bln = daftarBulan[date.getMonth()];
-                    const thn = date.getFullYear();
-                    const jam = String(date.getHours()).padStart(2, '0');
-                    const mnt = String(date.getMinutes()).padStart(2, '0');
-                    return `${hari}, ${tgl} ${bln} ${thn} | Pukul ${jam}:${mnt} Wita`;
-                }
-                return flatpickr.formatDate(date, format);
-            },
-            onChange: function() {
-                updatePemberitahuan();
-            }
-        });
+        // Logika untuk menampilkan teks "Pukul [jam]:[menit] Wita"
+        if (format === "CUSTOM_TIME") {
+            const jam = String(date.getHours()).padStart(2, '0');
+            const mnt = String(date.getMinutes()).padStart(2, '0');
+            return `Pukul ${jam}:${mnt} Wita`;
+        }
+        return flatpickr.formatDate(date, format);
+    },
+    onChange: function() {
+        updatePemberitahuan();
+    }
+});
         
         // Modal & Pengingat Setup
         const modal = document.getElementById('reminderModal');
@@ -676,7 +700,8 @@
                 }
             }
 
-            fpInstance.setDate(`${tanggalValid}T08:00`);
+            fpTanggal.setDate(tanggalValid);
+fpJam.setDate("08:00");
             tanggalResepsiAcara = tanggalValid;
             updatePemberitahuan();
         }
@@ -688,43 +713,46 @@
 
         document.getElementById('waktuPengingat').addEventListener('input', updatePemberitahuan);
 
-        function updatePemberitahuan() {
-            const teksPemberitahuan = document.getElementById('teksPemberitahuan');
-            const waktuPengingat = document.getElementById('waktuPengingat').value;
+   function updatePemberitahuan() {
+    const teksPemberitahuan = document.getElementById('teksPemberitahuan');
+    const valTanggal = document.getElementById('tanggalPengingat').value;
+    const valJam = document.getElementById('jamPengingat').value;
 
-            if (!waktuPengingat || !tanggalResepsiAcara) return;
+    if (!valTanggal || !valJam || !tanggalResepsiAcara) return;
 
-            const waktuAcaraFull = new Date(`${tanggalResepsiAcara}T${jamResepsiAcara}`);
-            const waktuPengingatFull = new Date(waktuPengingat);
-            const selisihMs = waktuAcaraFull - waktuPengingatFull;
+    const waktuAcaraFull = new Date(`${tanggalResepsiAcara}T${jamResepsiAcara}`);
+    const waktuPengingatFull = new Date(`${valTanggal}T${valJam}`);
+    const selisihMs = waktuAcaraFull - waktuPengingatFull;
 
-            if (selisihMs <= 0) {
-                teksPemberitahuan.innerText = "* Peringatan: Waktu pengingat harus sebelum acara dimulai.";
-                teksPemberitahuan.style.color = "#ff4d4d";
-            } else {
-                teksPemberitahuan.style.color = "var(--gold-main)";
-                const selisihJam = Math.floor(selisihMs / (1000 * 60 * 60));
-                const selisihHari = Math.floor(selisihJam / 24);
+    if (selisihMs <= 0) {
+        teksPemberitahuan.innerText = "* Peringatan: Waktu pengingat harus sebelum acara dimulai.";
+        teksPemberitahuan.style.color = "#ff4d4d";
+    } else {
+        teksPemberitahuan.style.color = "var(--gold-main)";
+        const selisihJam = Math.floor(selisihMs / (1000 * 60 * 60));
+        const selisihHari = Math.floor(selisihJam / 24);
 
-                if (selisihHari > 0) {
-                    teksPemberitahuan.innerText = `* Pengingat akan dikirim ${selisihHari} hari sebelum acara.`;
-                } else if (selisihJam > 0) {
-                    teksPemberitahuan.innerText = `* Pengingat akan dikirim ${selisihJam} jam sebelum acara.`;
-                } else {
-                    const selisihMenit = Math.floor(selisihMs / (1000 * 60));
-                    teksPemberitahuan.innerText = `* Pengingat akan dikirim ${selisihMenit} menit sebelum acara.`;
-                }
-            }
+        if (selisihHari > 0) {
+            teksPemberitahuan.innerText = `* Pengingat akan dikirim ${selisihHari} hari sebelum acara.`;
+        } else if (selisihJam > 0) {
+            teksPemberitahuan.innerText = `* Pengingat akan dikirim ${selisihJam} jam sebelum acara.`;
+        } else {
+            const selisihMenit = Math.floor(selisihMs / (1000 * 60));
+            teksPemberitahuan.innerText = `* Pengingat akan dikirim ${selisihMenit} menit sebelum acara.`;
         }
+    }
+}
 
         document.getElementById('formReminder').addEventListener('submit', async function(e) {
             e.preventDefault();
             let inputNumber = document.getElementById('waNumber').value;
-            let inputWaktu = document.getElementById('waktuPengingat').value;
             let btnSubmit = document.getElementById('btnSubmitForm');
+            let valTanggal = document.getElementById('tanggalPengingat').value;
+let valJam = document.getElementById('jamPengingat').value;
+let jadwalKirimDipilih = `${valTanggal} ${valJam}:00`;
             
             if(inputNumber.startsWith('0')) inputNumber = '62' + inputNumber.substring(1);
-            let jadwalKirimDipilih = inputWaktu.replace('T', ' ') + ':00';
+           
 
             btnSubmit.innerText = "Menyimpan...";
             btnSubmit.disabled = true;
