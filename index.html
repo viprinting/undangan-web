@@ -616,24 +616,25 @@
         }
 
         // Flatpickr Setup
-        let fpInstance = flatpickr("#waktuPengingat", {
-            enableTime: true,
-            time_24hr: true,
-            locale: "id",
-            altInput: true,
-            plugins: [
-                new confirmDatePlugin({
-                    confirmIcon: "",
-                    confirmText: "SET WAKTU",
-                    showAlways: true,
-                    theme: "dark"
-                })
-            ],
-            altFormat: "CUSTOM",
-            dateFormat: "Y-m-d\\TH:i",
-            formatDate: function(date, format, locale) {
-                if (format === "CUSTOM") {
-                    const daftarHari = ["Ahad", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+    let fpInstance = flatpickr("#waktuPengingat", {
+    enableTime: true,
+    time_24hr: true,
+    locale: "id",
+    altInput: true,
+    disableMobile: true, // Tambahkan baris ini agar format custom dan UI Flatpickr tetap muncul di HP
+    plugins: [
+        new confirmDatePlugin({
+            confirmIcon: "",
+            confirmText: "SET WAKTU",
+            showAlways: true,
+            theme: "dark"
+        })
+    ],
+    altFormat: "CUSTOM",
+    dateFormat: "Y-m-d\\TH:i",
+    formatDate: function(date, format, locale) {
+        if (format === "CUSTOM") {
+            const daftarHari = ["Ahad", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
                     const daftarBulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
                     const hari = daftarHari[date.getDay()];
                     const tgl = date.getDate();
