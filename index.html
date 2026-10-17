@@ -368,12 +368,12 @@
             background: linear-gradient(to left, transparent, var(--gold-main));
         }
 
-       .footer-logo {
-            height: 60px; /* Ukuran diperbesar dari 35px (Silakan sesuaikan angkanya) */
+     .footer-logo {
+            height: 35px;
             width: auto;
-            opacity: 0.7; /* Ditambahkan agar logo menjadi agak transparan */
             filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); 
-            transition: transform 0.3s ease;
+            opacity: 0.6; /* Tambahkan baris ini. Nilai 0.6 berarti 60% terlihat (40% transparan) */
+            transition: all 0.3s ease; /* Ubah 'transform' menjadi 'all' agar efek hover opacity mulus */
         }
 
         .footer-link-container:hover .footer-logo {
