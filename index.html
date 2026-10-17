@@ -467,9 +467,10 @@
                     document.getElementById('btn-maps').style.display = 'none'; // Sembunyikan jika maps_link kosong
                 }
 
-                // Logika Penyesuaian Footer berdasarkan usernamePercetakan
+              // Logika Penyesuaian Footer berdasarkan usernamePercetakan
                 const usernamePercetakan = data.usernamePercetakan;
                 const footerLogo = document.getElementById('footerLogo');
+                const logoWrapper = document.getElementById('logoWrapper'); // Ambil elemen wrapper logo
                 const footerNama = document.getElementById('footerNamaPercetakan');
                 const footerNoWa = document.getElementById('footerNoWa');
                 const footerLink = document.getElementById('footer-link');
@@ -477,19 +478,32 @@
                 if (usernamePercetakan === 'muflihprint') {
                     // Tampilkan Logo Muflih Print
                     footerLogo.style.display = 'block';
+                    logoWrapper.style.gap = '15px'; // Berikan jarak antara garis dan logo
+                    
                     footerNama.innerText = "Percetakan Muflih Print";
                     footerNoWa.innerText = "081574009621";
                     footerLink.href = "https://wa.me/6281574009621?text=Halo%20Muflih%20Print,%20saya%20ingin%20menanyakan%20info%20pembuatan%20undangan";
                 } else {
                     // Jika bukan muflihprint, hilangkan logo dan sesuaikan dengan data tabel percetakan
-                    footerLogo.style.display = 'none'; // Logo dihilangkan, menyisakan garis menyatu (.logo-wrapper)
+                    footerLogo.style.display = 'none'; // Logo dihilangkan
+                    logoWrapper.style.gap = '0px'; // Hilangkan jarak (gap) agar garis menyatu sepenuhnya
                     
                     if (data.percetakan) {
                         const namaP = data.percetakan.nama || "Percetakan";
                         const waP = data.percetakan.no_wa || "";
                         
+                        // Modifikasi agar nomor WA yang ditampilkan dimulai dari 0
+                        let waTampil = waP;
+                        if (waTampil.startsWith('62')) {
+                            waTampil = '0' + waTampil.substring(2);
+                        } else if (waTampil.startsWith('+62')) {
+                            waTampil = '0' + waTampil.substring(3);
+                        }
+                        
                         footerNama.innerText = namaP;
-                        footerNoWa.innerText = waP;
+                        footerNoWa.innerText = waTampil; // Menampilkan nomor dengan awalan 0
+                        
+                        // Link WhatsApp tetap menggunakan format database (waP) agar tidak error saat diklik
                         footerLink.href = `https://wa.me/${waP}?text=Halo%20${encodeURIComponent(namaP)},%20saya%20ingin%20menanyakan%20info%20pembuatan%20undangan`;
                     } else {
                         footerNama.innerText = "Percetakan";
