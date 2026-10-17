@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Undangan Pernikahan</title>
+    
+    <!-- Google Fonts untuk kesan Mewah (Serif & Sans-Serif) -->
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Lato:wght@300;400&display=swap" rel="stylesheet">
+    
+    <!-- Library Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        /* CSS RESET & VARIABLES */
+        :root {
+            --bg-color: #0A1128; /* Midnight Blue */
+            --gold-light: #F9E596;
+            --gold-main: #D4AF37;
+            --gold-dark: #AA8C2C;
+            --text-light: #F8F9FA;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-light);
+            font-family: 'Lato', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* CONTAINER UTAMA (Mobile First) */
+        .invitation-card {
+            width: 100%;
+            max-width: 480px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px 20px;
+            text-align: center;
+            position: relative;
+            background: radial-gradient(circle at center, #111D4A 0%, #0A1128 100%);
+            opacity: 0;
+            animation: fadeIn 2s ease-in-out forwards;
+        }
+
+        /* ORNAMEN DEKORASI (Bisa diganti gambar jika ada) */
+        .ornament {
+            font-size: 24px;
+            color: var(--gold-main);
+            margin-bottom: 20px;
+            opacity: 0.8;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--gold-light);
+            margin-bottom: 15px;
+        }
+
+        .names {
+            font-family: 'Playfair Display', serif;
+            font-size: 42px;
+            color: var(--gold-main);
+            line-height: 1.2;
+            margin-bottom: 30px;
+            text-shadow: 0px 2px 10px rgba(212, 175, 55, 0.2);
+        }
+
+        .details {
+            font-size: 16px;
+            line-height: 1.8;
+            margin-bottom: 40px;
+            color: #E0E0E0;
+        }
+
+        .details span {
+            display: block;
+            font-weight: 300;
+        }
+
+        .details .date {
+            font-weight: 400;
+            font-size: 18px;
+            color: var(--gold-light);
+            margin-bottom: 5px;
+        }
+
+        /* TOMBOL-TOMBOL */
+        .btn-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 80%;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 14px 24px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: none;
+            font-family: 'Lato', sans-serif;
+            text-transform: uppercase;
+        }
+
+        .btn-maps {
+            background: linear-gradient(135deg, var(--gold-light), var(--gold-main));
+            color: var(--bg-color);
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+        }
+
+        .btn-maps:hover {
+            background: linear-gradient(135deg, var(--gold-main), var(--gold-dark));
+            transform: translateY(-2px);
+        }
+
+        .btn-reminder {
+            background: transparent;
+            color: var(--gold-light);
+            border: 1px solid var(--gold-main);
+        }
+
+        .btn-reminder:hover {
+            background: rgba(212, 175, 55, 0.1);
+        }
+
+        /* LOADING STATE */
+        .loading-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            color: var(--gold-main);
+            font-family: 'Playfair Display', serif;
+            font-size: 20px;
+            transition: opacity 0.5s ease;
+        }
+
+        /* MODAL (POP-UP) PENGINGAT */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: #111D4A;
+            padding: 30px 20px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 350px;
+            text-align: center;
+            border: 1px solid var(--gold-dark);
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: translateY(0);
+        }
+
+        .modal-content h3 {
+            color: var(--gold-main);
+            margin-bottom: 10px;
+            font-family: 'Playfair Display', serif;
+        }
+
+        .modal-content p {
+            font-size: 13px;
+            color: #ccc;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .modal-content input {
+            width: 100%;
+            padding: 12px 15px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            background: #0A1128;
+            color: white;
+            font-size: 14px;
+            margin-bottom: 20px;
+            outline: none;
+        }
+
+        .modal-content input:focus {
+            border-color: var(--gold-main);
+        }
+
+        .btn-submit {
+            background: var(--gold-main);
+            color: var(--bg-color);
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .btn-cancel {
+            background: transparent;
+            color: #aaa;
+            width: 100%;
+            font-size: 12px;
+        }
+
+        /* ANIMASI */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Layar Loading Awal -->
+    <div class="loading-screen" id="loadingScreen">
+        Membuka Undangan...
+    </div>
+
+    <!-- Konten Undangan Utama -->
+    <div class="invitation-card" id="invitationCard" style="display: none;">
+        <div class="ornament">✧</div>
+        <div class="subtitle">The Wedding Of</div>
+        
+        <!-- Data Dinamis akan dimuat ke sini -->
+        <h1 class="names" id="nama-mempelai">... & ...</h1>
+        
+        <div class="details">
+            <span class="date" id="tanggal-resepsi">...</span>
+            <span id="waktu-resepsi">...</span>
+        </div>
+
+        <div class="btn-container">
+            <!-- Tombol Buka Maps (Link Dinamis) -->
+            <a href="#" class="btn btn-maps" id="btn-maps" target="_blank">Buka Google Maps</a>
+            
+            <!-- Tombol Pengingat -->
+            <button class="btn btn-reminder" onclick="openModal()">Ingatkan Saya</button>
+        </div>
+    </div>
+
+    <!-- Modal Form Pengingat WA -->
+    <div class="modal-overlay" id="reminderModal">
+        <div class="modal-content">
+            <h3>Pengingat Otomatis</h3>
+            <p>Masukkan nomor WhatsApp Anda. Kami akan mengirimkan pengingat di hari H acara.</p>
+            
+            <form id="formReminder">
+                <input type="tel" id="waNumber" placeholder="Contoh: 081234567890" required pattern="[0-9]+" minlength="10">
+                <button type="submit" class="btn btn-submit" id="btnSubmitForm">Simpan Nomor</button>
+                <button type="button" class="btn btn-cancel" onclick="closeModal()">Batal</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 1. KONFIGURASI SUPABASE
+        // ==========================================
+        const SUPABASE_URL = 'https://qnnacckoyfzrmvobwccb.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFubmFjY2tveWZ6cm12b2J3Y2NiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIwOTIxNTEsImV4cCI6MjEwNzY2ODE1MX0.XbLOSpq1ylDjkxrDqoQBJIFAZp6RhsDiCiXn6kF9NjA';
+
+        // Inisialisasi Supabase
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Variabel global untuk menyimpan data spesifik undangan ini
+        let dataWeddingId = "";
+        let jadwalFonnte = "";
+
+        // ==========================================
+        // 2. MENGAMBIL DATA DARI DATABASE BERDASARKAN URL
+        // ==========================================
+        async function muatDataUndangan() {
+            // Ambil parameter ?id= dari URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const undanganId = urlParams.get('id');
+
+            const loadingScreen = document.getElementById('loadingScreen');
+            const invitationCard = document.getElementById('invitationCard');
+
+            // Jika URL tidak memiliki parameter ?id=
+            if (!undanganId) {
+                loadingScreen.innerHTML = "ID Undangan tidak ditemukan.<br><span style='font-size:14px; margin-top:10px;'>Pastikan URL menggunakan ?id=nama-pasangan</span>";
+                return;
+            }
+
+            try {
+                // Query ke tabel data_undangan menggunakan Supabase
+                const { data, error } = await supabaseClient
+                    .from('data_undangan')
+                    .select('id, "wPanggilan", "pPanggilan", "tanggalResepsi", "jamResepsi", maps_link, jadwal_fonnte')
+                    .eq('url_undangan', undanganId)
+                    .single(); // Ambil 1 data saja
+
+                if (error || !data) {
+                    loadingScreen.innerHTML = "Maaf, Undangan tidak ditemukan.";
+                    console.error("Supabase Error:", error);
+                    return;
+                }
+
+                // Jika data ditemukan, masukkan ke dalam HTML
+                document.getElementById('nama-mempelai').innerText = `${data.wPanggilan} & ${data.pPanggilan}`;
+                document.getElementById('tanggal-resepsi').innerText = data.tanggalResepsi;
+                document.getElementById('waktu-resepsi').innerText = data.jamResepsi;
+                
+                if (data.maps_link) {
+                    document.getElementById('btn-maps').href = data.maps_link;
+                } else {
+                    document.getElementById('btn-maps').style.display = 'none'; // Sembunyikan jika maps_link kosong
+                }
+
+                // Simpan id (UUID) dan jadwal untuk keperluan tabel pengingat_wa
+                dataWeddingId = data.id;
+                jadwalFonnte = data.jadwal_fonnte;
+
+                // Matikan loading, tampilkan undangan
+                loadingScreen.style.opacity = "0";
+                setTimeout(() => {
+                    loadingScreen.style.display = "none";
+                    invitationCard.style.display = "flex";
+                }, 500);
+
+            } catch (err) {
+                loadingScreen.innerHTML = "Terjadi kesalahan sistem.";
+                console.error(err);
+            }
+        }
+
+        // Jalankan fungsi saat halaman web pertama kali dibuka
+        window.onload = muatDataUndangan;
+
+
+        // ==========================================
+        // 3. LOGIKA POP-UP MODAL & PENYIMPANAN NOMOR
+        // ==========================================
+        const modal = document.getElementById('reminderModal');
+
+        function openModal() {
+            modal.classList.add('active');
+        }
+
+        function closeModal() {
+            modal.classList.remove('active');
+            document.getElementById('formReminder').reset();
+        }
+
+        // Fungsi ketika tombol "Simpan Nomor" diklik
+        document.getElementById('formReminder').addEventListener('submit', async function(e) {
+            e.preventDefault(); // Mencegah halaman ter-refresh
+
+            let inputNumber = document.getElementById('waNumber').value;
+            let btnSubmit = document.getElementById('btnSubmitForm');
+            
+            // Format nomor: Ubah '08...' menjadi '628...'
+            if(inputNumber.startsWith('0')) {
+                inputNumber = '62' + inputNumber.substring(1);
+            }
+
+            // Ubah teks tombol menjadi loading
+            btnSubmit.innerText = "Menyimpan...";
+            btnSubmit.disabled = true;
+
+            try {
+                // Simpan ke Supabase (tabel pengingat_wa)
+                const { error } = await supabaseClient
+                    .from('pengingat_wa')
+                    .insert([
+                        { 
+                            nomor_wa: inputNumber, 
+                            wedding_id: dataWeddingId, 
+                            jadwal_kirim: jadwalFonnte 
+                        }
+                    ]);
+
+                if (error) throw error;
+
+                alert("Nomor berhasil disimpan! Kami akan mengingatkan Anda nanti.");
+                closeModal();
+
+            } catch (error) {
+                console.error("Error inserting data:", error);
+                alert("Gagal menyimpan nomor. Silakan coba lagi.");
+            } finally {
+                // Kembalikan kondisi tombol
+                btnSubmit.innerText = "Simpan Nomor";
+                btnSubmit.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
